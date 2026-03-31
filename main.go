@@ -62,6 +62,7 @@ func main() {
 	v1Router.Get("/ready", handlerReadiness)
 	v1Router.Get("/err", handlerErr)
 	v1Router.Post("/user/create", apiCfg.handlerUser)
+	v1Router.Get("/user/get", apiCfg.handlerGetUserByAPIKey)
 
 	router.Mount("/v1", v1Router)
 
@@ -71,8 +72,9 @@ func main() {
 	}
 
 	fmt.Printf("Server starting on port : %v", port)
-	errServ := srv.ListenAndServe()
-	if errServ != nil {
-		log.Fatal(err)
+
+	err = srv.ListenAndServe()
+	if err != nil {
+		log.Fatal("Error starting server", err)
 	}
 }

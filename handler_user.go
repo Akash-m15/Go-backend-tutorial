@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Akash-m15/rssagg/internal/auth"
 	"github.com/Akash-m15/rssagg/internal/database"
 	"github.com/google/uuid"
 )
@@ -34,6 +35,21 @@ func (apiCfg *apiConfig) handlerUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondErr(w, 400, fmt.Sprintf("Error in creating User : %v", err))
 	}
-	fmt.Println(user)
-	respondWithJSON(w, 200, user)
+	userRes := dbUserToUser(user)
+	respondWithJSON(w, 200, userRes)
+}
+
+func (apiCfg *apiConfig) handlerGetUserByAPIKey(w http.ResponseWriter, r *http.Request) {
+
+	api_key, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		respondErr(w, 403, fmt.Sprintf("Error is getting APIKey: %v", err))
+	}
+	user, err := apiCfg.DB.GetUserByAPIKey(r.Context(), api_key)
+	if err != nil {
+		respondErr(w, 400, fmt.Sprintf("Error in getting User : %v", err))
+	}
+
+	userRes := dbUserToUser(user)
+	respondWithJSON(w, 200, userRes)
 }
