@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
-	"github.com/Akash-m15/rssagg/internal/auth"
 	"github.com/Akash-m15/rssagg/internal/database"
+	"github.com/go-chi/chi"
 	"github.com/google/uuid"
 )
 
@@ -39,17 +40,24 @@ func (apiCfg *apiConfig) handlerUser(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, 200, userRes)
 }
 
-func (apiCfg *apiConfig) handlerGetUserByAPIKey(w http.ResponseWriter, r *http.Request) {
-
-	api_key, err := auth.GetAPIKey(r.Header)
-	if err != nil {
-		respondErr(w, 403, fmt.Sprintf("Error is getting APIKey: %v", err))
-	}
-	user, err := apiCfg.DB.GetUserByAPIKey(r.Context(), api_key)
-	if err != nil {
-		respondErr(w, 400, fmt.Sprintf("Error in getting User : %v", err))
-	}
-
+func (apiCfg *apiConfig) handlerGetUserByAPIKey(w http.ResponseWriter, r *http.Request, user database.User) {
 	userRes := dbUserToUser(user)
 	respondWithJSON(w, 200, userRes)
+}
+
+func (apiCfg *apiConfig) handlerGetUserPosts(w http.ResponseWriter, r *http.Request, user database.User) {
+	limitStr := chi.URLParam(r, "limit")
+	limit, err := strconv.ParseInt(limitStr, 0, 32)
+	if err != nil {
+		respondErr(w, 403, "Error parsing limit")
+	}
+
+	posts, err := apiCfg.DB.GetPostsForUser(r.Context(), database.GetPostsForUserParams{
+		UserID: user.ID,
+		Limit:  int32(limit),
+	})
+	if err != nil {
+		respondErr(w, 400, fmt.Sprintf("Error in creating User : %v", err))
+	}
+	respondWithJSON(w, 200, dbPostsToPosts(posts))
 }
