@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/Akash-m15/rssagg/internal/database"
 	"github.com/go-chi/chi"
@@ -43,6 +44,8 @@ func main() {
 		DB: queries,
 	}
 
+	go startScraping(queries, 10, time.Minute)
+
 	if err != nil {
 		log.Fatal("Error connecting to Database", err)
 	}
@@ -61,8 +64,15 @@ func main() {
 	v1Router := chi.NewRouter()
 	v1Router.Get("/ready", handlerReadiness)
 	v1Router.Get("/err", handlerErr)
+
 	v1Router.Post("/user/create", apiCfg.handlerUser)
-	v1Router.Get("/user/get", apiCfg.handlerGetUserByAPIKey)
+	v1Router.Get("/user/get", apiCfg.middlewareAuth(apiCfg.handlerGetUserByAPIKey))
+	v1Router.Post("/user/feed/create", apiCfg.middlewareAuth(apiCfg.handlerCreateFeed))
+	v1Router.Post("/user/feedFollow/create", apiCfg.middlewareAuth(apiCfg.handlerCreateFeedFollow))
+	v1Router.Get("/user/feeds", apiCfg.middlewareAuth(apiCfg.handlerGetFeeds))
+	v1Router.Get("/user/posts/{limit}", apiCfg.middlewareAuth(apiCfg.handlerGetUserPosts))
+	v1Router.Get("/user/feedFollow/get", apiCfg.middlewareAuth(apiCfg.handlerGetFeedFollow))
+	v1Router.Delete("/user/feedFollow/{feedFollowId}", apiCfg.middlewareAuth(apiCfg.handlerDeleteFeedFollow))
 
 	router.Mount("/v1", v1Router)
 
@@ -72,7 +82,6 @@ func main() {
 	}
 
 	fmt.Printf("Server starting on port : %v", port)
-
 	err = srv.ListenAndServe()
 	if err != nil {
 		log.Fatal("Error starting server", err)
